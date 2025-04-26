@@ -89,7 +89,11 @@ app.post("/api/rtps/apply/residential", async (req, res) => {
       }
 
       await selectOptionIgnoringSpaces(driver,"65015", data.policeStation);
-
+      const docDirectory = path.resolve('./photoAndDoc');
+      if (!fs.existsSync(docDirectory)) {
+        fs.mkdirSync(docDirectory, { recursive: true });
+      }
+      data.photoPath = path.join(docDirectory, path.basename(data.photoPath));
       await driver.findElement(By.id("90837")).sendKeys(data.photoPath);
       await driver.findElement(By.id("41566_1")).click();
       await driver.findElement(By.id("captchaAnswer")).sendKeys(captchaAnswerText);
@@ -100,6 +104,7 @@ app.post("/api/rtps/apply/residential", async (req, res) => {
       await driver.findElement(By.id("submit_btn")).click();
       await driver.sleep(1000);
       await selectOptionIgnoringSpaces(driver,"4867_enclDoc_cb", "आधार कार्ड");
+      data.docPath = path.join(docDirectory, path.basename(data.docPath));
       await driver.findElement(By.id("4867_attach")).sendKeys(data.docPath);
       await driver.findElement(By.id("submit_btn")).click();
       await driver.sleep(1000);
