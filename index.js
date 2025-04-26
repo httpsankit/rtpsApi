@@ -24,12 +24,12 @@ app.post("/api/rtps/apply/residential", async (req, res) => {
   while (attempts < MAX_RETRIES && !success) {
     attempts++;
     console.log(`Attempt ${attempts} of ${MAX_RETRIES}`);
-    
+
     try {
       if (driver) {
         await driver.quit(); // Clean up previous driver instance if it exists
       }
-      
+
       const chrome = require("selenium-webdriver/chrome");
       let options = new chrome.Options();
       options.addArguments("--window-size=1366,768");
@@ -40,13 +40,17 @@ app.post("/api/rtps/apply/residential", async (req, res) => {
         .forBrowser("chrome")
         .setChromeOptions(options)
         .build();
-
+      console.log("opening rtps page");
       await driver.get("https://serviceonline.bihar.gov.in/");
+
+      console.log("opening residential page");
       await driver.get("https://qrgo.page.link/8YEcD");
+ 
       await driver.sleep(2000);
-      
+      console.log("Solving Captcha");
       let captchaAnswerText = await processCaptcha(driver);
-      
+      console.log("Captcha Solved");
+      console.log("Filling Informations");
       if (data.gender === "male") await driver.findElement(By.id("17290_1")).click();
       else if (data.gender === "female") await driver.findElement(By.id("17290_2")).click();
 
@@ -70,22 +74,22 @@ app.post("/api/rtps/apply/residential", async (req, res) => {
       await fillInput("17294", data.email);
       await driver.findElement(By.id("17391")).sendKeys("Bihar");
 
-      await selectOptionIgnoringSpaces(driver,"17297", data.dist);
-      await selectOptionIgnoringSpaces(driver,"17296", data.subDivision);
-      await selectOptionIgnoringSpaces(driver,"17298", data.block);
+      await selectOptionIgnoringSpaces(driver, "17297", data.dist);
+      await selectOptionIgnoringSpaces(driver, "17296", data.subDivision);
+      await selectOptionIgnoringSpaces(driver, "17298", data.block);
 
       if (data.urbanLocalBodyType === "GramPanchayat") {
         await driver.findElement(By.id("75290_1")).click();
-        await selectOptionIgnoringSpaces(driver,"56886", data.panchayat);
+        await selectOptionIgnoringSpaces(driver, "56886", data.panchayat);
       } else if (data.urbanLocalBodyType === "NagarNigam") {
         await driver.findElement(By.id("75290_2")).click();
-        await selectOptionIgnoringSpaces(driver,"75291", data.panchayat);
+        await selectOptionIgnoringSpaces(driver, "75291", data.panchayat);
       } else if (data.urbanLocalBodyType === "NagarParisad") {
         await driver.findElement(By.id("75290_3")).click();
-        await selectOptionIgnoringSpaces(driver,"75292", data.panchayat);
+        await selectOptionIgnoringSpaces(driver, "75292", data.panchayat);
       } else if (data.urbanLocalBodyType === "NagarPanchayat") {
         await driver.findElement(By.id("75290_4")).click();
-        await selectOptionIgnoringSpaces(driver,"75293", data.panchayat);
+        await selectOptionIgnoringSpaces(driver, "75293", data.panchayat);
       }
 
       await selectOptionIgnoringSpaces(driver,"65015", data.policeStation);
@@ -93,52 +97,52 @@ app.post("/api/rtps/apply/residential", async (req, res) => {
       if (!fs.existsSync(docDirectory)) {
         fs.mkdirSync(docDirectory, { recursive: true });
       }
+      data.docPath = path.join(docDirectory, path.basename(data.docPath));
       data.photoPath = path.join(docDirectory, path.basename(data.photoPath));
+
       await driver.findElement(By.id("90837")).sendKeys(data.photoPath);
       await driver.findElement(By.id("41566_1")).click();
       await driver.findElement(By.id("captchaAnswer")).sendKeys(captchaAnswerText);
       await driver.findElement(By.id("submit_btn")).click();
       await driver.sleep(1000);
       await driver.switchTo().alert().accept();
+      console.log("Final Submit 1");
       await driver.sleep(2000);
       await driver.findElement(By.id("submit_btn")).click();
+      console.log("Final Submit 2");
       await driver.sleep(1000);
-      await selectOptionIgnoringSpaces(driver,"4867_enclDoc_cb", "आधार कार्ड");
-      data.docPath = path.join(docDirectory, path.basename(data.docPath));
+      await selectOptionIgnoringSpaces(driver, "4867_enclDoc_cb", "आधार कार्ड");
+      console.log("uploading documents");
       await driver.findElement(By.id("4867_attach")).sendKeys(data.docPath);
       await driver.findElement(By.id("submit_btn")).click();
       await driver.sleep(1000);
       await driver.findElement(By.id("submit_btn")).click();
-
-      // Verify success by checking for application number
+      console.log("Successfully submitted");
       const appNoElem = await driver.findElement(By.xpath("//*[@id='printDiv']/div[2]/table[1]/tbody/tr/td/table/tbody/tr[8]/td[2]/span"));
       const applicationNumber = await appNoElem.getText();
-      
-      // Get the full HTML of the page
+
       const pageHtml = await driver.getPageSource();
-      
-      // Save the HTML locally
       const applicationDir = path.resolve('./applications');
       if (!fs.existsSync(applicationDir)) {
         fs.mkdirSync(applicationDir, { recursive: true });
       }
-      
+
       const safeFileName = `${applicationNumber.replaceAll("/", "_").replace(/:/g,"").trim()}`;
       const filePath = path.join(applicationDir, `${safeFileName}.html`);
       fs.writeFileSync(filePath, pageHtml, 'utf8');
-      
+
       // Send the successful response
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         applicationNumber,
         pageHtml: pageHtml,
         savedFilePath: filePath,
         attempts: attempts
       });
-      
+
       success = true; // Exit the retry loop
       await driver.quit();
-      
+
     } catch (error) {
       console.error(`Attempt ${attempts} failed with error:`, error.message);
       lastError = error;
@@ -147,7 +151,7 @@ app.post("/api/rtps/apply/residential", async (req, res) => {
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
   }
-  
+
   // If all retries failed, return error response
   if (!success) {
     if (driver) {
@@ -158,8 +162,8 @@ app.post("/api/rtps/apply/residential", async (req, res) => {
       }
     }
     
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: lastError ? lastError.message : "Application submission failed after maximum retries",
       attempts: attempts
     });
