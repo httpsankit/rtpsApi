@@ -1,0 +1,21 @@
+{
+  "name": "rtps-api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "chromedriver": "^135.0.4",
+    "express": "^5.1.0",
+    "selenium-webdriver": "^4.31.0",
+    "tesseract.js": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1"
+  }
+}
