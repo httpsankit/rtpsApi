@@ -30,16 +30,18 @@ app.post("/api/rtps/apply/residential", async (req, res) => {
         await driver.quit(); // Clean up previous driver instance if it exists
       }
 
+      const commandTimeout = 5 * 60 * 1000; // in milliseconds
       const chrome = require("selenium-webdriver/chrome");
       let options = new chrome.Options();
       options.addArguments("--window-size=1366,768");
-      options.addArguments('--headless'); // Run in headless mode
+      // options.addArguments('--headless'); // Run in headless mode
       options.addArguments('--disable-gpu'); // Optional: better compatibility
 
       driver = await new Builder()
         .forBrowser("chrome")
         .setChromeOptions(options)
         .build();
+      await driver.manage().setTimeouts({ pageLoad: commandTimeout });
       console.log("opening rtps page");
       await driver.get("https://serviceonline.bihar.gov.in/");
 
