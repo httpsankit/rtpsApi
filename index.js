@@ -33,9 +33,24 @@ app.post("/api/rtps/apply/residential", async (req, res) => {
       const commandTimeout = 5 * 60 * 1000; // in milliseconds
       const chrome = require("selenium-webdriver/chrome");
       let options = new chrome.Options();
-      options.addArguments("--window-size=1366,768");
-      // options.addArguments('--headless'); // Run in headless mode
-      options.addArguments('--disable-gpu'); // Optional: better compatibility
+      
+      // Server-friendly options
+      // options.addArguments('--headless=new');  // Use new headless mode
+      options.addArguments('--no-sandbox');
+      options.addArguments('--disable-dev-shm-usage');
+      options.addArguments('--disable-gpu');
+      options.addArguments('--disable-software-rasterizer');
+      options.addArguments('--disable-extensions');
+      options.addArguments('--disable-setuid-sandbox');
+      options.addArguments('--window-size=1366,768');
+      
+      // Use a temporary directory for user data
+      const userDataDir = path.join('/tmp', `chrome-${process.pid}-${Date.now()}`);
+      if (fs.existsSync(userDataDir)) {
+        fs.rmSync(userDataDir, { recursive: true, force: true });
+      }
+      fs.mkdirSync(userDataDir, { recursive: true });
+      options.addArguments(`--user-data-dir=${userDataDir}`);
 
       driver = await new Builder()
         .forBrowser("chrome")
@@ -144,6 +159,13 @@ app.post("/api/rtps/apply/residential", async (req, res) => {
 
       success = true; // Exit the retry loop
       await driver.quit();
+      
+      // Clean up the user data directory after successful completion
+      try {
+        fs.rmSync(userDataDir, { recursive: true, force: true });
+      } catch (cleanupError) {
+        console.error("Error cleaning up user data directory:", cleanupError);
+      }
 
     } catch (error) {
       console.error(`Attempt ${attempts} failed with error:`, error.message);
